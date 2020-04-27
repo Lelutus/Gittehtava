@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+ <body>   
+   
+   <button id="keksi">Kirjaudu</button>
+   <script>
+       document.getElementById("keksi").addEventListener("click", function(){
+            const Http = new XMLHttpRequest();
+            const url = 'http://localhost:3002/login';
+            Http.open("GET", url);
+            Http.send();   
+            setTimeout(location.reload.bind(location), 1000);
+            
+        })
+   </script>
+   
+ </body>
+</html>

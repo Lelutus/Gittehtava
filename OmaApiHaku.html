@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>Tehtävä 43-44</title>
+  <style>
+    th,
+    td {
+      padding: 4px;
+    }
+
+    #elementit>label input {
+      display: block;
+    }
+
+    input.text {
+      margin-bottom: 12px;
+      width: 95%;
+      padding: .4em;
+    }
+
+    .ui-dialog .ui-state-error {
+      padding: .3em;
+    }
+
+    .validateTips {
+      border: 1px solid transparent;
+      padding: 0.3em;
+    }
+
+    .overflow {
+      height: 200px;
+    }
+  </style>
+  <link rel="stylesheet" href="style/jquery-ui.css">
+  <script src="js/jquery-3.4.1.min.js"></script>
+  <script src="js/jquery-ui.js"></script>
+  <script>
+    $(document).ready(function () {
+      $("#taulu").hide();
+      var _nimi;
+      var _osoite;
+      var _tyyppi;
+      var _data;
+      var tyypit;
+      var dialog, form,
+        dAsty = $("#dAsty"),
+        dNimi = $("#dNimi"),
+        dOsoite = $("#dOsoite"),
+        dPostinro = $("#dPostinro"),
+        dPostitmp = $("#dPostitmp"),
+        kaikkiKentat = $([]).add(dNimi).add(dOsoite).add(dPostinro).add(dPostitmp),
+        vinkit = $(".validateTips");
+
+      function updateTips(t) {
+        vinkit
+          .text(t)
+          .addClass("ui-state-highlight");
+        setTimeout(function () {
+          vinkit.removeClass("ui-state-highlight", 1500);
+        }, 500);
+      }
+
+      function tarkistaPituus(o, n, min, max) {
+        if (o.val().length < min || o.val().length > max) {
+          o.addClass("ui-state-error");
+          if (min == max) {
+            updateTips(n + "-kentän pituus pitää olla " + min + " merkin pituinen");
+          } else {
+            updateTips(n + "-kentän pituus pitää olla välillä " + min + " - " + max);
+          } s
+          return false;
+        } else {
+          return true;
+        }
+      }
+
+      function lisaaUusiAsiakas() {
+        _tyyppi = $("#dAsty option:selected").val();
+        var valid = true;
+        kaikkiKentat.removeClass("ui-state-error");
+
+        valid = valid && tarkistaPituus(dNimi, "Nimi", 0, 80);
+        valid = valid && tarkistaPituus(dOsoite, "Osoite", 0, 80);
+        valid = valid && tarkistaPituus(dPostinro, "Postinumero", 0, 5);
+        valid = valid && tarkistaPituus(dPostitmp, "Postitoimipaikka", 0, 80);
+
+        if (valid) {
+
+          $.post("http://localhost:3002/asiakas?", $("#formi").serialize())
+            .fail(function (data) {
+
+              alert(data.responseText);
+            })
+
+
+          fetch(_tyyppi);
+        }
+
+        dialog.dialog("close");
+
+        return valid;
+      }
+
+      $("button").click(function () {
+        fetch($("#asiakastyypit option:selected").attr("avain"));
+      });
+
+      dialog = $("#dialog-form").dialog({
+        autoOpen: false,
+        height: 560,
+        width: 350,
+        modal: true,
+        buttons: {
+          "Lisää": lisaaUusiAsiakas,
+          Peruuta: function () {
+            dialog.dialog("close");
+          }
+        },
+        close: function () {
+          form[0].reset();
+          kaikkiKentat.removeClass("ui-state-error");
+        }
+      });
+
+      form = dialog.find("form").on("submit", function (event) {
+        event.preventDefault();
+        lisaaUusiAsiakas();
+      })
+
+      $("#lisaaUusi").on("click", function () {
+        $("#dAsty").selectmenu();
+        dialog.dialog("open");
+      });
+
+
+
+      poista = function (_avain) {
+        var urli = "http://localhost:3002/asiakas/" + _avain;
+        $.ajax({
+          url: urli,
+          type: 'DELETE'
+        });
+        fetch(_tyyppi);
+        // var url = "http://localhost:3002/asiakas/" + _avain;
+        // console.log("url osoite on " + url);
+        // $.get(url, function(data) {
+        //   fetch($("#asiakastyypit option:selected").attr("avain"));
+        // }).fail(function(jqXHR) {
+        //   $("#tulos").text("VIRHE: " + jqXHR.responseText);
+        // });
+      }
+      _muokkaa = function (_avain){
+                var _asty_avain1 = $("#asty1").val();
+                var _nimi1 = $("#nimi1").val();
+                var _osoite1 = $("#osoite1").val();
+                var _postinro1 = $("#postinro1").val();
+                var _postitmp1 = $("#postitmp1").val();                
+                var _data1 = { AVAIN: _avain, NIMI: _nimi1, OSOITE: _osoite1, POSTINRO: _postinro1, POSTITMP: _postitmp1, ASTY_AVAIN: _asty_avain1}
+                
+          $.ajax({
+            url: "http://localhost:3002/asiakas/",
+            type: "PUT",
+            contentType: 'application/json',
+            data: JSON.stringify(_data1),
+            success: function(data){
+              console.log(data);
+              console.log("Onnistu!");
+            } 
+          });
+          fetch(_tyyppi);
+        
+      }
+      muokkaa = function (_avain) {
+
+        $("#taulu tr").remove();
+        $.get("http://localhost:3002/asiakas/" + _avain, function (data) {
+
+          if (data.length > 0) {
+            $("#taulu").append('<tr><th>Asty_avain</th><th>Nimi</th><th>Osoite</th><th>Postinro</th><th>Postitoimipaikka</th><th>Luontipvm</th><th>Poista</th></tr>');
+            $("#tulos").text("Hakutuloksia " + data.length + " kpl");
+            $(data).each(function (key, value) {
+                  
+              $("#taulu").append(
+                '<tr><td><input id="asty1" value="' + value.ASTY_AVAIN + '"></td>\
+                <td><input id="nimi1" value="' + value.NIMI + '"></td>\
+                <td><input id="osoite1" value="' + value.OSOITE + '"></td>\
+                <td><input id="postinro1" value="' + value.POSTINRO + '"></td>\
+                <td><input id="postitmp1" value="' + value.POSTITMP + '"></td>\
+                <td>' + value.LUONTIPVM + '</td>\
+                <td><a href="#" onclick="poista(' + value.AVAIN + ')">Poista</a></td>\
+                <td><a href="#" onclick="_muokkaa('+ value.AVAIN +')">Muokkaa</a></td></tr>');
+                
+            })
+            $("#taulu").show();
+          } else {
+            $("#taulu").hide();
+            $("#tulos").text("Hakutuloksia " + data.length + " kpl");
+          }
+        }).fail(function (jqXHR) {
+          $("#tulos").text("VIRHE: " + jqXHR.responseText);
+        });
+        
+        
+      }
+
+
+
+      fetch = function (_tyyppi) {
+        _nimi = $("#nimi").val();
+        _osoite = $("#osoite").val();
+        _tyyppi = $("#asiakastyypit").val();
+        if (_tyyppi != 0) {
+          _data = { NIMI: _nimi, OSOITE: _osoite, ASTY_AVAIN: _tyyppi }
+        }
+
+
+        $("#taulu tr").remove();
+        $.get("http://localhost:3002/asiakas?", _data, function (data) {
+
+          if (data.length > 0) {
+            $("#taulu").append('<tr><th>Asty_avain</th><th>Nimi</th><th>Osoite</th><th>Postinro</th><th>Postitoimipaikka</th><th>Luontipvm</th><th>Poista</th></tr>');
+            $("#tulos").text("Hakutuloksia " + data.length + " kpl");
+            $(data).each(function (key, value) {
+              $("#taulu").append('<tr><td>' + value.ASTY_AVAIN + '</td><td>' + value.NIMI + '</td><td>' + value.OSOITE + '</td>' +
+                '<td>' + value.POSTINRO + '</td>' + '<td>' + value.POSTITMP + '</td>' + '<td>' + value.LUONTIPVM + '</td><td><a href="#" onclick="poista(' + value.AVAIN + ')">Poista</a></td>\
+              <td><a href="#" onclick="muokkaa(' + value.AVAIN + ')">Muokkaa</a></td></tr>');
+            })
+            $("#taulu").show();
+          } else {
+            $("#taulu").hide();
+            $("#tulos").text("Hakutuloksia " + data.length + " kpl");
+          }
+        }).fail(function (jqXHR) {
+          $("#tulos").text("VIRHE: " + jqXHR.responseText);
+        });
+      }
+
+      $.get("http://localhost:3002/asiakastyyppi?", function (data) {
+
+        if (data.length > 0) {
+          tyypit = data;
+          $.each(tyypit, function (key, value) {
+            $("#asiakastyypit").append('<option avain="' + value.AVAIN + '" value="' + value.AVAIN + '">' + value.SELITE + '</option>');
+            $("#dAsty").append('<option name="asty_avain" value="' + value.AVAIN + '">' + value.SELITE + '</option>');
+          })
+        }
+      }).fail(function (jqXHR) {
+        $("#tulos").text("VIRHE: " + jqXHR.responseText);
+      });
+    });
+  </script>
+</head>
+
+<body>
+  <label for="nimi">Nimi: </label>
+  <input id="nimi">
+  <label for="osoite">Osoite: </label>
+  <input id="osoite">
+  <label for="osoite">Asiakastyyppi: </label>
+  <select id="asiakastyypit">
+    <option avain="" value="0">Kaikki</option>
+  </select>
+  <button>Hae</button>
+  <button id="pois">Kirjaudu ulos</button>
+  <script>
+    document.getElementById("pois").addEventListener("click", function () {
+      const Http = new XMLHttpRequest();
+      const url = 'http://localhost:3002/logout';
+      Http.open("GET", url);
+      Http.send();
+      setTimeout(location.reload.bind(location), 1000);
+
+    })
+  </script>
+  <a href="#" id="lisaaUusi">Lisää uusi asiakas</a>
+  <p id="tulos"></p>
+  <table border="1" id="taulu">
+
+  </table>
+
+  <div id="dialog-form" title="Lisää uusi asiakas">
+    <p class="validateTips">Kaikki kentät ovat pakollisia</pclass="validateTips">
+      <form id="formi">
+        <fieldset id="elementit">
+          <label for="nimi">Nimi</label>
+          <input type="text" name="nimi" id="dNimi" value="" class="text ui-widget-content ui-corner-all">
+          <label for="osoite">Osoite</label>
+          <input type="text" name="osoite" id="dOsoite" value="" class="text ui-widget-content ui-cornel-all">
+          <label for="postinro">Postinumero</label>
+          <input type="text" name="postinro" id="dPostinro" value="" class="text ui-widget-content ui-cornel-all">
+          <label for="postitmp">Postitoimipaikka</label>
+          <input type="text" name="postitmp" id="dPostitmp" value="" class="text ui-widget-content ui-cornel-all">
+          <label for="asty_avain">Asiakastyyppi</label>
+          <select name="asty_avain" id="dAsty">
+
+          </select>
+          <input type="submit" tabindex="-1" style="position:absolute; top:-1000px">
+        </fieldset>
+      </form>
+  </div>
+
+
+
+</body>
+
+</html>
